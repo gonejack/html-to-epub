@@ -8,9 +8,12 @@ Command line tool for converting html to epub.
 ```
 
 ### Usage
+```shell
+> html-to-epub *.html
+```
 ```
 Usage:
-  html-to-epub [-o output] [--title title] [--cover cover] *.eml
+  html-to-epub [-o output] [--title title] [--cover cover] *.html
 
 Flags:
   -o, --output string   output filename (default "output.epub")
