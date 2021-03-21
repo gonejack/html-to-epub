@@ -45,6 +45,11 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 		return errors.New("no html given")
 	}
 
+	err = h.mkdirs()
+	if err != nil {
+		return
+	}
+
 	h.book = epub.NewEpub(h.Title)
 	{
 		h.setAuthor()
@@ -335,7 +340,13 @@ func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 
 	return doc
 }
-
+func (h *HtmlToEpub) mkdirs() error {
+	err := os.MkdirAll(h.ImagesDir, 0777)
+	if err != nil {
+		return fmt.Errorf("cannot make images dir %s", err)
+	}
+	return nil
+}
 func md5str(s string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
