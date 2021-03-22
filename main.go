@@ -81,6 +81,8 @@ func run(c *cobra.Command, args []string) error {
 	exec := cmd.HtmlToEpub{
 		DefaultCover: defaultCover,
 
+		ImagesDir: "images",
+
 		Cover:   *cover,
 		Title:   *title,
 		Author:  *author,
