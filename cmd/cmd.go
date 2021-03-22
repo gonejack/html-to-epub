@@ -111,21 +111,21 @@ func (h *HtmlToEpub) setCover() (err error) {
 }
 
 func (h *HtmlToEpub) addHTML(html string) (err error) {
-	fd, err := os.Open(html)
+	file, err := os.Open(html)
 	if err != nil {
 		return
 	}
 
-	document, err := goquery.NewDocumentFromReader(fd)
+	document, err := goquery.NewDocumentFromReader(file)
 	if err != nil {
 		return
 	}
 
 	document = h.cleanDoc(document)
 	downloads := h.downloadImages(document)
-	locals := make(map[string]string)
+	localFiles := make(map[string]string)
 	document.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(img, locals, downloads)
+		h.changeRef(img, localFiles, downloads)
 	})
 
 	title := document.Find("title").Text()
@@ -300,7 +300,7 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, locals, downloads map[str
 
 		localFile := src
 
-		if _, err := os.Stat(localFile); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(localFile); err != nil {
 			localFile, _ = url.QueryUnescape(localFile)
 		}
 
