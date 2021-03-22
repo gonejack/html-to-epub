@@ -316,15 +316,7 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, locals, downloads map[str
 		}
 
 		// add image
-		dirname := filepath.Dir(localFile)
-		{
-			// evernote compatible
-			dirname = strings.TrimSuffix(dirname, ".resources")
-		}
-		internalName := fmt.Sprintf("%s_%s", dirname, filepath.Base(localFile))
-		if !strings.HasSuffix(internalName, fmime.Extension()) {
-			internalName += fmime.Extension()
-		}
+		internalName := md5str(localFile) + fmime.Extension()
 		internalRef, err = h.book.AddImage(localFile, internalName)
 		if err != nil {
 			log.Printf("cannot add image %s", err)
