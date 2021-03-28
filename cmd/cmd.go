@@ -82,11 +82,11 @@ func (h *HtmlToEpub) setAuthor() {
 	h.book.SetAuthor(h.Author)
 }
 func (h *HtmlToEpub) setDesc() {
-	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/textbundle-to-epub", time.Now().Format("2006-01-02")))
+	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
 }
 func (h *HtmlToEpub) setCover() (err error) {
 	if h.Cover == "" {
-		temp, err := os.CreateTemp("", "textbundle-to-epub")
+		temp, err := os.CreateTemp("", "html-to-epub")
 		if err != nil {
 			return fmt.Errorf("cannot create tempfile: %s", err)
 		}

@@ -64,8 +64,8 @@ github.com/golang/mock v1.3.1/go.mod h1:sBzyDLLjw3U8JLTeZvSv8jJB+tU5PVekmnlKIyFU
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
-github.com/gonejack/go-epub v1.0.2 h1:aSity7/KMNQQm3JEs1422KD2fu4cDrUsiZ66CmB1YTs=
-github.com/gonejack/go-epub v1.0.2/go.mod h1:FTk593gdTZ30JUIJUk53c3AMTh63EYaeNbIQUMzIL0o=
+github.com/gonejack/go-epub v1.0.3 h1:Q9nyGX0Gv1UQ2b7h22uEeIrUHqP5Hg2sANW/0EemchQ=
+github.com/gonejack/go-epub v1.0.3/go.mod h1:FTk593gdTZ30JUIJUk53c3AMTh63EYaeNbIQUMzIL0o=
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
