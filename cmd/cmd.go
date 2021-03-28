@@ -123,9 +123,10 @@ func (h *HtmlToEpub) addHTML(html string) (err error) {
 
 	document = h.cleanDoc(document)
 	downloads := h.downloadImages(document)
-	localFiles := make(map[string]string)
+
+	savedRefs := make(map[string]string)
 	document.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(img, localFiles, downloads)
+		h.changeRef(img, savedRefs, downloads)
 	})
 
 	title := document.Find("title").Text()
@@ -139,7 +140,7 @@ func (h *HtmlToEpub) addHTML(html string) (err error) {
 	return
 }
 func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
-	downloads := make(map[string]string)
+	downloadPaths := make(map[string]string)
 	downloadLinks := make([]string, 0)
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
 		src, _ := img.Attr("src")
@@ -147,7 +148,7 @@ func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
 			return
 		}
 
-		localFile, exist := downloads[src]
+		localFile, exist := downloadPaths[src]
 		if exist {
 			return
 		}
@@ -159,7 +160,7 @@ func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
 		}
 		localFile = filepath.Join(h.ImagesDir, fmt.Sprintf("%s%s", md5str(src), filepath.Ext(uri.Path)))
 
-		downloads[src] = localFile
+		downloadPaths[src] = localFile
 		downloadLinks = append(downloadLinks, src)
 	})
 
@@ -169,17 +170,17 @@ func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
 	for i := range downloadLinks {
 		_ = batch.Acquire(context.TODO(), 1)
 
-		src := downloadLinks[i]
+		link := downloadLinks[i]
 		group.Go(func() error {
 			defer batch.Release(1)
 
 			if h.Verbose {
-				log.Printf("fetch %s", src)
+				log.Printf("fetch %s", link)
 			}
 
-			err := h.download(downloads[src], src)
+			err := h.download(link, downloadPaths[link])
 			if err != nil {
-				log.Printf("download %s fail: %s", src, err)
+				log.Printf("download %s fail: %s", link, err)
 			}
 
 			return nil
@@ -188,9 +189,9 @@ func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
 
 	_ = group.Wait()
 
-	return downloads
+	return downloadPaths
 }
-func (h *HtmlToEpub) download(path string, src string) (err error) {
+func (h *HtmlToEpub) download(src string, path string) (err error) {
 	timeout, cancel := context.WithTimeout(context.TODO(), time.Minute*2)
 	defer cancel()
 
@@ -251,82 +252,70 @@ func (h *HtmlToEpub) download(path string, src string) (err error) {
 
 	return
 }
-func (h *HtmlToEpub) changeRef(img *goquery.Selection, locals, downloads map[string]string) {
+func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[string]string) {
 	img.RemoveAttr("loading")
 	img.RemoveAttr("srcset")
 
 	src, _ := img.Attr("src")
 
-	switch {
-	case strings.HasPrefix(src, "data:"):
+	if strings.HasPrefix(src, "data:") {
 		return
+	}
+
+	internalRef, exist := savedRefs[src]
+	if exist {
+		img.SetAttr("src", internalRef)
+		return
+	}
+
+	var localFile string
+	switch {
 	case strings.HasPrefix(src, "http"):
-		localFile := downloads[src]
-
-		if h.Verbose {
-			log.Printf("replace %s as %s", src, localFile)
+		localFile, exist = downloads[src]
+		if !exist {
+			log.Printf("local file of %s not exist", src)
+			return
 		}
+	default:
+		localFile = src
+		_, err := os.Stat(localFile)
+		if err != nil {
+			localFile, _ = url.QueryUnescape(localFile)
+		}
+	}
 
-		// check mime
-		fmime, err := mimetype.DetectFile(localFile)
+	if h.Verbose {
+		log.Printf("replace %s as %s", src, localFile)
+	}
+
+	// check mime
+	fmime, err := mimetype.DetectFile(localFile)
+	{
 		if err != nil {
 			log.Printf("cannot detect image mime of %s: %s", src, err)
 			return
 		}
 		if !strings.HasPrefix(fmime.String(), "image") {
-			img.Remove()
 			log.Printf("mime of %s is %s instead of images", src, fmime.String())
 			return
 		}
+	}
 
-		// add image
-		internalName := filepath.Base(localFile)
+	// add image
+	internalName := filepath.Base(localFile)
+	{
 		if !strings.HasSuffix(internalName, fmime.Extension()) {
 			internalName += fmime.Extension()
 		}
-		internalRef, err := h.book.AddImage(localFile, internalName)
-		if err != nil {
-			log.Printf("cannot add image %s", err)
-			return
-		}
-
-		img.SetAttr("src", internalRef)
-	default:
-		internalRef, exist := locals[src]
-		if exist {
-			img.SetAttr("src", internalRef)
-			return
-		} else {
-			defer func() { locals[src] = internalRef }()
-		}
-
-		localFile := src
-
-		if _, err := os.Stat(localFile); err != nil {
-			localFile, _ = url.QueryUnescape(localFile)
-		}
-
-		// check mime
-		fmime, err := mimetype.DetectFile(localFile)
-		if err != nil {
-			log.Printf("cannot detect image mime of %s: %s", src, err)
-			return
-		}
-
-		if h.Verbose {
-			log.Printf("replace %s as %s", src, localFile)
-		}
-
-		// add image
-		internalName := md5str(localFile) + fmime.Extension()
 		internalRef, err = h.book.AddImage(localFile, internalName)
 		if err != nil {
 			log.Printf("cannot add image %s", err)
 			return
 		}
-
-		img.SetAttr("src", internalRef)
+		savedRefs[src] = internalRef
 	}
+
+	img.SetAttr("src", internalRef)
 }
 func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 	// remove inoreader ads
