@@ -60,8 +60,9 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 		}
 	}
 
+	savedRefs := make(map[string]string)
 	for i, html := range htmls {
-		err = h.addHTML(i+1, html)
+		err = h.addHTML(i+1, savedRefs, html)
 		if err != nil {
 			err = fmt.Errorf("parse %s failed: %s", html, err)
 			return
@@ -110,7 +111,7 @@ func (h *HtmlToEpub) setCover() (err error) {
 	return
 }
 
-func (h *HtmlToEpub) addHTML(index int, html string) (err error) {
+func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string) (err error) {
 	file, err := os.Open(html)
 	if err != nil {
 		return
@@ -124,7 +125,6 @@ func (h *HtmlToEpub) addHTML(index int, html string) (err error) {
 	document = h.cleanDoc(document)
 	downloads := h.downloadImages(document)
 
-	savedRefs := make(map[string]string)
 	document.Find("img").Each(func(i int, img *goquery.Selection) {
 		h.changeRef(img, savedRefs, downloads)
 	})
