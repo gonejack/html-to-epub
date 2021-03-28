@@ -5,11 +5,9 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-
 	"io"
 	"log"
 	"net/http"
-
 	"net/url"
 	"os"
 	"path/filepath"
@@ -41,6 +39,9 @@ type HtmlToEpub struct {
 }
 
 func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
+	if len(htmls) == 0 {
+		htmls, _ = filepath.Glob("*.html")
+	}
 	if len(htmls) == 0 {
 		return errors.New("no html given")
 	}
@@ -289,10 +290,6 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 		}
 	}
 
-	if h.Verbose {
-		log.Printf("replace %s as %s", src, localFile)
-	}
-
 	// check mime
 	fmime, err := mimetype.DetectFile(localFile)
 	{
@@ -318,6 +315,10 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 			return
 		}
 		savedRefs[src] = internalRef
+	}
+
+	if h.Verbose {
+		log.Printf("replace %s as %s", src, localFile)
 	}
 
 	img.SetAttr("src", internalRef)
