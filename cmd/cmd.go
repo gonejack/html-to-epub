@@ -258,6 +258,8 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, locals, downloads map[str
 	src, _ := img.Attr("src")
 
 	switch {
+	case strings.HasPrefix(src, "data:"):
+		return
 	case strings.HasPrefix(src, "http"):
 		localFile := downloads[src]
 
