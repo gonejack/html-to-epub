@@ -60,8 +60,8 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 		}
 	}
 
-	for _, html := range htmls {
-		err = h.addHTML(html)
+	for i, html := range htmls {
+		err = h.addHTML(i+1, html)
 		if err != nil {
 			err = fmt.Errorf("parse %s failed: %s", html, err)
 			return
@@ -110,7 +110,7 @@ func (h *HtmlToEpub) setCover() (err error) {
 	return
 }
 
-func (h *HtmlToEpub) addHTML(html string) (err error) {
+func (h *HtmlToEpub) addHTML(index int, html string) (err error) {
 	file, err := os.Open(html)
 	if err != nil {
 		return
@@ -133,6 +133,7 @@ func (h *HtmlToEpub) addHTML(html string) (err error) {
 	if title == "" {
 		title = strings.TrimSuffix(filepath.Base(html), filepath.Ext(html))
 	}
+	title = fmt.Sprintf("%d. %s", index, title)
 
 	content, err := document.Find("body").Html()
 	if err != nil {
