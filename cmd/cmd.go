@@ -130,6 +130,10 @@ func (h *HtmlToEpub) addHTML(html string) (err error) {
 	})
 
 	title := document.Find("title").Text()
+	if title == "" {
+		title = strings.TrimSuffix(filepath.Base(html), filepath.Ext(html))
+	}
+
 	content, err := document.Find("body").Html()
 	if err != nil {
 		return
