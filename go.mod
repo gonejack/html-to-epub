@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/PuerkitoBio/goquery v1.6.1
-	github.com/bmaupin/go-epub v0.5.4
+	github.com/bmaupin/go-epub v0.5.3
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gabriel-vasile/mimetype v1.2.0
 	github.com/schollz/progressbar/v3 v3.7.6
