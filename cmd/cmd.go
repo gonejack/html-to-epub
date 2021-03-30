@@ -118,25 +118,25 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 		return
 	}
 
-	document, err := goquery.NewDocumentFromReader(file)
+	doc, err := goquery.NewDocumentFromReader(file)
 	if err != nil {
 		return
 	}
 
-	document = h.cleanDoc(document)
-	downloads := h.downloadImages(document)
+	doc = h.cleanDoc(doc)
+	downloads := h.downloadImages(doc)
 
-	document.Find("img").Each(func(i int, img *goquery.Selection) {
+	doc.Find("img").Each(func(i int, img *goquery.Selection) {
 		h.changeRef(img, savedRefs, downloads)
 	})
 
-	title := document.Find("title").Text()
+	title := doc.Find("title").Text()
 	if title == "" {
 		title = strings.TrimSuffix(filepath.Base(html), filepath.Ext(html))
 	}
 	title = fmt.Sprintf("%d. %s", index, title)
 
-	content, err := document.Find("body").Html()
+	content, err := doc.Find("body").Html()
 	if err != nil {
 		return
 	}
