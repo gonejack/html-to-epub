@@ -113,12 +113,12 @@ func (h *HtmlToEpub) setCover() (err error) {
 }
 
 func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string) (err error) {
-	file, err := os.Open(html)
+	fd, err := os.Open(html)
 	if err != nil {
 		return
 	}
 
-	doc, err := goquery.NewDocumentFromReader(file)
+	doc, err := goquery.NewDocumentFromReader(fd)
 	if err != nil {
 		return
 	}
