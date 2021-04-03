@@ -20,8 +20,9 @@ Usage:
 
 Flags:
   -o, --output string   output filename (default "output.epub")
-      --title string    epub title (default "HTML")
-      --cover string    cover image
+      --cover string    set epub cover image
+      --title string    set epub title (default "HTML")
+      --author string   set epub author (default "HTML to Epub")
   -v, --verbose         verbose
   -h, --help            help for html-to-epub
 ```
