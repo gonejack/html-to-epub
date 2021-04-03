@@ -11,7 +11,6 @@ Command line tool for converting html to epub.
 ```
 
 ### Usage
-Fox unix user:
 ```shell
 > html-to-epub *.html
 ```
