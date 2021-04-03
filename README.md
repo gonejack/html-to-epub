@@ -1,6 +1,9 @@
 # html-to-epub
-
 Command line tool for converting html to epub.
+
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/gonejack/html-to-epub)
+![Build](https://github.com/gonejack/html-to-epub/actions/workflows/go.yml/badge.svg)
+[![GitHub license](https://img.shields.io/github/license/gonejack/html-to-epub.svg?color=blue)](LICENSE)
 
 ### Install
 ```shell

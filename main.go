@@ -39,29 +39,29 @@ func init() {
 	prog.Flags().SortFlags = false
 	prog.PersistentFlags().SortFlags = false
 
-	cover = prog.PersistentFlags().StringP(
-		"cover",
-		"",
-		"",
-		"epub cover image",
-	)
-	title = prog.PersistentFlags().StringP(
-		"title",
-		"",
-		"HTML",
-		"epub title",
-	)
-	author = prog.PersistentFlags().StringP(
-		"author",
-		"",
-		"HTML to Epub",
-		"epub author",
-	)
 	output = prog.PersistentFlags().StringP(
 		"output",
 		"o",
 		"output.epub",
 		"output filename",
+	)
+	cover = prog.PersistentFlags().StringP(
+		"cover",
+		"",
+		"",
+		"set epub cover image",
+	)
+	title = prog.PersistentFlags().StringP(
+		"title",
+		"",
+		"HTML",
+		"set epub title",
+	)
+	author = prog.PersistentFlags().StringP(
+		"author",
+		"",
+		"HTML to Epub",
+		"set epub author",
 	)
 	prog.PersistentFlags().BoolVarP(
 		&verbose,

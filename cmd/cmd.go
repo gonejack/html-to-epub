@@ -264,10 +264,6 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 
 	src, _ := img.Attr("src")
 
-	if strings.HasPrefix(src, "data:") {
-		return
-	}
-
 	internalRef, exist := savedRefs[src]
 	if exist {
 		img.SetAttr("src", internalRef)
@@ -276,6 +272,8 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 
 	var localFile string
 	switch {
+	case strings.HasPrefix(src, "data:"):
+		return
 	case strings.HasPrefix(src, "http"):
 		localFile, exist = downloads[src]
 		if !exist {
@@ -304,7 +302,7 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 	}
 
 	// add image
-	internalName := filepath.Base(localFile)
+	internalName := md5str(localFile)
 	{
 		if !strings.HasSuffix(internalName, fmime.Extension()) {
 			internalName += fmime.Extension()
