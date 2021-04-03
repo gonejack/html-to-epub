@@ -26,3 +26,6 @@ Flags:
   -v, --verbose         verbose
   -h, --help            help for html-to-epub
 ```
+
+### Preview
+![](preview.png)
