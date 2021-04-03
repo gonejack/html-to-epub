@@ -27,5 +27,5 @@ Flags:
   -h, --help            help for html-to-epub
 ```
 
-### Preview
-![](preview.png)
+### Screenshot
+![](screenshot.png)
