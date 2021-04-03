@@ -29,15 +29,3 @@ Flags:
 
 ### Screenshot
 ![](screenshot.png)
-
-### Windows
-Because the Windows shell (command processor) never does any globbing when calling external commands. 
-
-Please call `html-to-epub.exe` without `*.html`:
-```shell
-> html-to-epub.exe
-```
-This will scan all html files under working directory.
-
-Or install [GitForWindows](https://gitforwindows.org/) then call this command under [Git Bash](https://www.educative.io/edpresso/how-to-install-git-bash-in-windows).
-

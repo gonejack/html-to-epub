@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	_ "embed"
 
@@ -87,6 +89,20 @@ func run(c *cobra.Command, args []string) error {
 		Title:   *title,
 		Author:  *author,
 		Verbose: verbose,
+	}
+
+	// support Windows globbing
+	if runtime.GOOS == "windows" {
+		for _, arg := range args {
+			if arg == "*.html" {
+				args = nil
+				break
+			}
+		}
+	}
+
+	if len(args) == 0 {
+		args, _ = filepath.Glob("*.html")
 	}
 
 	return exec.Run(args, *output)

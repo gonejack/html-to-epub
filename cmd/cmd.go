@@ -40,9 +40,6 @@ type HtmlToEpub struct {
 
 func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 	if len(htmls) == 0 {
-		htmls, _ = filepath.Glob("*.html")
-	}
-	if len(htmls) == 0 {
 		return errors.New("no html given")
 	}
 
