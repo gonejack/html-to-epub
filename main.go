@@ -101,7 +101,7 @@ func run(c *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(args) == 0 {
+	if len(args) == 0 || args[0] == "*.html" {
 		args, _ = filepath.Glob("*.html")
 	}
 
