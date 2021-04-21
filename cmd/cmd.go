@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -15,25 +12,19 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/dustin/go-humanize"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/gonejack/get"
 	"github.com/gonejack/go-epub"
-	"github.com/schollz/progressbar/v3"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 type HtmlToEpub struct {
-	client http.Client
-
-	ImagesDir string
-
 	DefaultCover []byte
 
-	Cover   string
-	Title   string
-	Author  string
-	Verbose bool
+	ImagesDir string
+	Cover     string
+	Title     string
+	Author    string
+	Verbose   bool
 
 	book *epub.Epub
 }
@@ -43,7 +34,7 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 		return errors.New("no html given")
 	}
 
-	err = h.mkdirs()
+	err = h.mkdir()
 	if err != nil {
 		return
 	}
@@ -121,10 +112,10 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 	}
 
 	doc = h.cleanDoc(doc)
-	downloads := h.downloadImages(doc)
 
+	savedImages := h.saveImages(doc)
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(img, savedRefs, downloads)
+		h.changeRef(img, savedRefs, savedImages)
 	})
 
 	title := doc.Find("title").Text()
@@ -142,16 +133,17 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 
 	return
 }
-func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
-	downloadPaths := make(map[string]string)
-	downloadLinks := make([]string, 0)
+func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
+	downloads := make(map[string]string)
+
+	var refs, paths []string
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
 		src, _ := img.Attr("src")
 		if !strings.HasPrefix(src, "http") {
 			return
 		}
 
-		localFile, exist := downloadPaths[src]
+		localFile, exist := downloads[src]
 		if exist {
 			return
 		}
@@ -163,97 +155,19 @@ func (h *HtmlToEpub) downloadImages(doc *goquery.Document) map[string]string {
 		}
 		localFile = filepath.Join(h.ImagesDir, fmt.Sprintf("%s%s", md5str(src), filepath.Ext(uri.Path)))
 
-		downloadPaths[src] = localFile
-		downloadLinks = append(downloadLinks, src)
+		refs = append(refs, src)
+		paths = append(paths, localFile)
+		downloads[src] = localFile
 	})
 
-	var batch = semaphore.NewWeighted(3)
-	var group errgroup.Group
-
-	for i := range downloadLinks {
-		_ = batch.Acquire(context.TODO(), 1)
-
-		link := downloadLinks[i]
-		group.Go(func() error {
-			defer batch.Release(1)
-
-			if h.Verbose {
-				log.Printf("fetch %s", link)
-			}
-
-			err := h.download(link, downloadPaths[link])
-			if err != nil {
-				log.Printf("download %s fail: %s", link, err)
-			}
-
-			return nil
-		})
+	getter := get.DefaultGetter()
+	getter.Verbose = h.Verbose
+	eRefs, errs := getter.BatchInOrder(refs, paths, 3, time.Minute*2)
+	for i := range eRefs {
+		log.Printf("download %s fail: %s", eRefs[i], errs[i])
 	}
 
-	_ = group.Wait()
-
-	return downloadPaths
-}
-func (h *HtmlToEpub) download(src string, path string) (err error) {
-	timeout, cancel := context.WithTimeout(context.TODO(), time.Minute*2)
-	defer cancel()
-
-	info, err := os.Stat(path)
-	if err == nil {
-		headReq, headErr := http.NewRequestWithContext(timeout, http.MethodHead, src, nil)
-		if headErr != nil {
-			return headErr
-		}
-		resp, headErr := h.client.Do(headReq)
-		if headErr == nil && info.Size() == resp.ContentLength {
-			return // skip download
-		}
-	}
-
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	request, err := http.NewRequestWithContext(timeout, http.MethodGet, src, nil)
-	if err != nil {
-		return
-	}
-	response, err := h.client.Do(request)
-	if err != nil {
-		return
-	}
-	defer response.Body.Close()
-
-	var written int64
-	if h.Verbose {
-		bar := progressbar.NewOptions64(response.ContentLength,
-			progressbar.OptionSetTheme(progressbar.Theme{Saucer: "=", SaucerPadding: ".", BarStart: "|", BarEnd: "|"}),
-			progressbar.OptionSetWidth(10),
-			progressbar.OptionSpinnerType(11),
-			progressbar.OptionShowBytes(true),
-			progressbar.OptionShowCount(),
-			progressbar.OptionSetPredictTime(false),
-			progressbar.OptionSetDescription(filepath.Base(src)),
-			progressbar.OptionSetRenderBlankState(true),
-			progressbar.OptionClearOnFinish(),
-		)
-		defer bar.Clear()
-		written, err = io.Copy(io.MultiWriter(file, bar), response.Body)
-	} else {
-		written, err = io.Copy(file, response.Body)
-	}
-
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return fmt.Errorf("response status code %d invalid", response.StatusCode)
-	}
-
-	if err == nil && written < response.ContentLength {
-		err = fmt.Errorf("expected %s but downloaded %s", humanize.Bytes(uint64(response.ContentLength)), humanize.Bytes(uint64(written)))
-	}
-
-	return
+	return downloads
 }
 func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[string]string) {
 	img.RemoveAttr("loading")
@@ -324,7 +238,7 @@ func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 
 	return doc
 }
-func (h *HtmlToEpub) mkdirs() error {
+func (h *HtmlToEpub) mkdir() error {
 	err := os.MkdirAll(h.ImagesDir, 0777)
 	if err != nil {
 		return fmt.Errorf("cannot make images dir %s", err)
