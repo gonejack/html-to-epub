@@ -236,6 +236,9 @@ func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 	// remove inoreader ads
 	doc.Find("body").Find(`div:contains("ads from inoreader")`).Closest("center").Remove()
 
+	// remove solidot.org ads
+	doc.Find("img[src='https://img.solidot.org//0/446/liiLIZF8Uh6yM.jpg']").Remove()
+
 	return doc
 }
 func (h *HtmlToEpub) mkdir() error {
