@@ -195,7 +195,7 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 		localFile = src
 		_, err := os.Stat(localFile)
 		if err != nil {
-			localFile, _ = url.QueryUnescape(localFile)
+			localFile, _ = url.PathUnescape(localFile)
 		}
 	}
 
