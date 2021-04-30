@@ -115,7 +115,7 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 
 	savedImages := h.saveImages(doc)
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(img, savedRefs, savedImages)
+		h.changeRef(html, img, savedRefs, savedImages)
 	})
 
 	title := doc.Find("title").Text()
@@ -169,7 +169,7 @@ func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 
 	return downloads
 }
-func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[string]string) {
+func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, savedRefs, downloads map[string]string) {
 	img.RemoveAttr("loading")
 	img.RemoveAttr("srcset")
 
@@ -192,11 +192,13 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 			return
 		}
 	default:
-		localFile = src
-		_, err := os.Stat(localFile)
+		fd, err := h.openLocalFile(htmlFile, src)
 		if err != nil {
-			localFile, _ = url.PathUnescape(localFile)
+			log.Printf("local ref %s not found: %s", src, err)
+			return
 		}
+		_ = fd.Close()
+		localFile = fd.Name()
 	}
 
 	// check mime
@@ -231,6 +233,31 @@ func (h *HtmlToEpub) changeRef(img *goquery.Selection, savedRefs, downloads map[
 	}
 
 	img.SetAttr("src", internalRef)
+}
+func (h *HtmlToEpub) openLocalFile(htmlFile string, ref string) (fd *os.File, err error) {
+	fd, err = os.Open(ref)
+	if err == nil {
+		return
+	}
+
+	// compatible with evernote's exported htmls
+	{
+		prefix := strings.TrimSuffix(htmlFile, filepath.Ext(htmlFile))
+		name := filepath.Base(ref)
+		fd, err = os.Open(filepath.Join(prefix+"_files", name))
+		if err == nil {
+			return
+		}
+		fd, err = os.Open(filepath.Join(prefix+".resources", name))
+		if err == nil {
+			return
+		}
+		if strings.HasSuffix(ref, ".") {
+			return h.openLocalFile(htmlFile, strings.TrimSuffix(ref, "."))
+		}
+	}
+
+	return
 }
 func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 	// remove inoreader ads
