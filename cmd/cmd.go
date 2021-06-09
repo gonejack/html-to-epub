@@ -105,6 +105,7 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 	if err != nil {
 		return
 	}
+	defer fd.Close()
 
 	doc, err := goquery.NewDocumentFromReader(fd)
 	if err != nil {
