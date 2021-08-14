@@ -27,6 +27,8 @@ type HtmlToEpub struct {
 	Verbose   bool
 
 	book *epub.Epub
+
+	imageIndex int
 }
 
 func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
@@ -91,7 +93,7 @@ func (h *HtmlToEpub) setCover() (err error) {
 	if err != nil {
 		return fmt.Errorf("cannot detect cover mime type %s", err)
 	}
-	coverRef, err := h.book.AddImage(h.Cover, "epub-cover"+fmime.Extension())
+	coverRef, err := h.book.AddImage(h.Cover, "cover"+fmime.Extension())
 	if err != nil {
 		return fmt.Errorf("cannot add cover %s", err)
 	}
@@ -216,14 +218,15 @@ func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, savedRef
 	}
 
 	// add image
-	internalName := md5str(localFile)
+	internalName := fmt.Sprintf("image_%03d", h.imageIndex)
 	{
+		h.imageIndex += 1
 		if !strings.HasSuffix(internalName, fmime.Extension()) {
 			internalName += fmime.Extension()
 		}
 		internalRef, err = h.book.AddImage(localFile, internalName)
 		if err != nil {
-			log.Printf("cannot add image %s", err)
+			log.Printf("cannot add image %s: %s", localFile, err)
 			return
 		}
 		savedRefs[src] = internalRef
