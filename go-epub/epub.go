@@ -220,19 +220,21 @@ func (e *Epub) AddImage(source string, imageFilename string) (string, error) {
 func (e *Epub) AddSection(body string, sectionTitle string, internalFilename string, internalCSSPath string) (string, error) {
 	// Generate a filename if one isn't provided
 	if internalFilename == "" {
-		var idx = 0
-		for _, section := range e.sections {
-			if section.filename == e.cover.xhtmlFilename {
-				continue
+		index := 1
+		for internalFilename == "" {
+			internalFilename = fmt.Sprintf(sectionFileFormat, index)
+			for _, section := range e.sections {
+				if section.filename == internalFilename {
+					internalFilename, index = "", index+1
+					break
+				}
 			}
-			idx += 1
 		}
-		internalFilename = fmt.Sprintf(sectionFileFormat, idx)
-	}
-
-	for _, section := range e.sections {
-		if section.filename == internalFilename {
-			return "", &FilenameAlreadyUsedError{Filename: internalFilename}
+	} else {
+		for _, section := range e.sections {
+			if section.filename == internalFilename {
+				return "", &FilenameAlreadyUsedError{Filename: internalFilename}
+			}
 		}
 	}
 
