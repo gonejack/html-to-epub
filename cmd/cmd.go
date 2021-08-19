@@ -140,7 +140,7 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 	downloads := make(map[string]string)
 
-	var refs, paths []string
+	tasks := get.NewDownloadTasks()
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
 		src, _ := img.Attr("src")
 		if !strings.HasPrefix(src, "http") {
@@ -159,17 +159,14 @@ func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 		}
 		localFile = filepath.Join(h.ImagesDir, fmt.Sprintf("%s%s", md5str(src), filepath.Ext(uri.Path)))
 
-		refs = append(refs, src)
-		paths = append(paths, localFile)
+		tasks.Add(src, localFile)
 		downloads[src] = localFile
 	})
-
-	getter := get.DefaultGetter()
-	getter.Verbose = h.Verbose
-	eRefs, errs := getter.BatchInOrder(refs, paths, 3, time.Minute*2)
-	for i := range eRefs {
-		log.Printf("download %s fail: %s", eRefs[i], errs[i])
-	}
+	get.Batch(tasks, 3, time.Minute*2).ForEach(func(t *get.DownloadTask) {
+		if t.Err != nil {
+			log.Printf("download %s fail: %s", t.Link, t.Err)
+		}
+	})
 
 	return downloads
 }
