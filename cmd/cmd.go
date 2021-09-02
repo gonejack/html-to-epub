@@ -52,9 +52,9 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 		}
 	}
 
-	savedRefs := make(map[string]string)
+	refs := make(map[string]string)
 	for i, html := range htmls {
-		err = h.addHTML(i+1, savedRefs, html)
+		err = h.add(i+1, refs, html)
 		if err != nil {
 			err = fmt.Errorf("parse %s failed: %s", html, err)
 			return
@@ -103,7 +103,7 @@ func (h *HtmlToEpub) setCover() (err error) {
 	return
 }
 
-func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string) (err error) {
+func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err error) {
 	fd, err := os.Open(html)
 	if err != nil {
 		return
@@ -117,9 +117,9 @@ func (h *HtmlToEpub) addHTML(index int, savedRefs map[string]string, html string
 
 	doc = h.cleanDoc(doc)
 
-	savedImages := h.saveImages(doc)
+	images := h.saveImages(doc)
 	doc.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(html, img, savedRefs, savedImages)
+		h.changeRef(html, img, refs, images)
 	})
 
 	title := doc.Find("title").Text()
@@ -170,13 +170,13 @@ func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 
 	return downloads
 }
-func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, savedRefs, downloads map[string]string) {
+func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, refs, downloads map[string]string) {
 	img.RemoveAttr("loading")
 	img.RemoveAttr("srcset")
 
 	src, _ := img.Attr("src")
 
-	internalRef, exist := savedRefs[src]
+	internalRef, exist := refs[src]
 	if exist {
 		img.SetAttr("src", internalRef)
 		return
@@ -227,7 +227,7 @@ func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, savedRef
 			log.Printf("cannot add image %s: %s", localFile, err)
 			return
 		}
-		savedRefs[src] = internalRef
+		refs[src] = internalRef
 	}
 
 	if h.Verbose {
