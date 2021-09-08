@@ -15,16 +15,13 @@ Command line tool for converting html to epub.
 > html-to-epub *.html
 ```
 ```
-Usage:
-  html-to-epub [-o output] [--title title] [--cover cover] *.html
-
 Flags:
-  -o, --output string   output filename (default "output.epub")
-      --cover string    set epub cover image
-      --title string    set epub title (default "HTML")
-      --author string   set epub author (default "HTML to Epub")
-  -v, --verbose         verbose
-  -h, --help            help for html-to-epub
+  -h, --help                     Show context-sensitive help.
+  -o, --output="output.epub"     Output filename.
+  -c, --cover=STRING             Set epub cover image.
+      --title="HTML"             Set epub title.
+      --author="HTML to Epub"    Set epub author.
+  -v, --verbose                  Verbose printing.
 ```
 
 ### Screenshot
