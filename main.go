@@ -1,113 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"runtime"
-
 	_ "embed"
+	"log"
 
 	"github.com/gonejack/html-to-epub/cmd"
-	"github.com/spf13/cobra"
 )
 
-var (
-	//go:embed cover.png
-	defaultCover []byte
-
-	cover   *string
-	title   *string
-	author  *string
-	output  *string
-	verbose = false
-
-	prog = &cobra.Command{
-		Use:   "html-to-epub [-o output] [--title title] [--cover cover] *.html",
-		Short: "Command line tool for converting html to epub.",
-		Run: func(c *cobra.Command, args []string) {
-			err := run(c, args)
-			if err != nil {
-				log.Fatal(err)
-			}
-		},
-	}
-)
-
-func init() {
-	log.SetOutput(os.Stdout)
-
-	prog.Flags().SortFlags = false
-	prog.PersistentFlags().SortFlags = false
-
-	output = prog.PersistentFlags().StringP(
-		"output",
-		"o",
-		"output.epub",
-		"output filename",
-	)
-	cover = prog.PersistentFlags().StringP(
-		"cover",
-		"",
-		"",
-		"set epub cover image",
-	)
-	title = prog.PersistentFlags().StringP(
-		"title",
-		"",
-		"HTML",
-		"set epub title",
-	)
-	author = prog.PersistentFlags().StringP(
-		"author",
-		"",
-		"HTML to Epub",
-		"set epub author",
-	)
-	prog.PersistentFlags().BoolVarP(
-		&verbose,
-		"verbose",
-		"v",
-		false,
-		"verbose",
-	)
-}
-
-func run(c *cobra.Command, args []string) error {
-	_, err := os.Stat(*output)
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("output file %s already exist", *output)
-	}
-
-	exec := cmd.HtmlToEpub{
-		DefaultCover: defaultCover,
-
-		ImagesDir: "images",
-
-		Cover:   *cover,
-		Title:   *title,
-		Author:  *author,
-		Verbose: verbose,
-	}
-
-	// support Windows globbing
-	if runtime.GOOS == "windows" {
-		for _, arg := range args {
-			if arg == "*.html" {
-				args = nil
-				break
-			}
-		}
-	}
-
-	if len(args) == 0 || args[0] == "*.html" {
-		args, _ = filepath.Glob("*.html")
-	}
-
-	return exec.Run(args, *output)
-}
+//go:embed cover.png
+var cover []byte
 
 func main() {
-	_ = prog.Execute()
+	c := cmd.HtmlToEpub{
+		DefaultCover: cover,
+		ImagesDir:    "images",
+	}
+	if err := c.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

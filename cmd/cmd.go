@@ -8,31 +8,68 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/alecthomas/kong"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gonejack/get"
 
 	"github.com/gonejack/html-to-epub/go-epub"
 )
 
-type HtmlToEpub struct {
-	DefaultCover []byte
+type options struct {
+	Output  string `short:"o" default:"output.epub" help:"Output filename."`
+	Cover   string `short:"c" help:"Set epub cover image."`
+	Title   string `default:"HTML" help:"Set epub title."`
+	Author  string `default:"HTML to Epub" help:"Set epub author."`
+	Verbose bool   `short:"v" help:"Verbose printing."`
 
-	ImagesDir string
-	Cover     string
-	Title     string
-	Author    string
-	Verbose   bool
+	HTML []string `arg:"" optional:""`
+}
+type HtmlToEpub struct {
+	options
+
+	DefaultCover []byte
+	ImagesDir    string
 
 	book *epub.Epub
 
 	imageIndex int
 }
 
-func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
+func (h *HtmlToEpub) Run() (err error) {
+	kong.Parse(&h.options,
+		kong.Name("html-to-epub"),
+		kong.Description("Command line tool for converting html to epub."),
+		kong.UsageOnError(),
+	)
+
+	_, err = os.Stat(h.Output)
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("output file %s already exist", h.Output)
+	}
+
+	// support Windows globbing
+	if runtime.GOOS == "windows" {
+		for _, html := range h.HTML {
+			if html == "*.html" {
+				h.HTML = nil
+				break
+			}
+		}
+	}
+
+	if len(h.HTML) == 0 || h.HTML[0] == "*.html" {
+		h.HTML, _ = filepath.Glob("*.html")
+	}
+
+	return h.run(h.HTML, h.Output)
+}
+
+func (h *HtmlToEpub) run(htmls []string, output string) (err error) {
 	if len(htmls) == 0 {
 		return errors.New("no html given")
 	}
@@ -68,7 +105,6 @@ func (h *HtmlToEpub) Run(htmls []string, output string) (err error) {
 
 	return
 }
-
 func (h *HtmlToEpub) setAuthor() {
 	h.book.SetAuthor(h.Author)
 }
@@ -102,7 +138,6 @@ func (h *HtmlToEpub) setCover() (err error) {
 
 	return
 }
-
 func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err error) {
 	fd, err := os.Open(html)
 	if err != nil {
