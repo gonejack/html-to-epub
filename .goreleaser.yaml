@@ -7,6 +7,9 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
 brews:
   - name: html-to-epub
     tap:
