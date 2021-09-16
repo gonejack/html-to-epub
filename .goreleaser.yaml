@@ -1,8 +1,25 @@
 builds:
-  - env: [CGO_ENABLED=0]
+  - env: [ CGO_ENABLED=0 ]
     goos:
       - linux
       - windows
       - darwin
     goarch:
       - amd64
+      - arm64
+brews:
+  - name: html-to-epub
+    tap:
+      owner: gonejack
+      name: homebrew-tap
+    url_template: "https://github.com/gonejack/html-to-epub/releases/download/{{ .Tag }}/{{ .ArtifactName }"
+    download_strategy: CurlDownloadStrategy
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    folder: Formula
+    caveats: "html-to-epub *.html"
+    homepage: "https://github.com/gonejack/html-to-epub"
+    description: "Tool converts .html file to .epub."
+    license: "MIT"
