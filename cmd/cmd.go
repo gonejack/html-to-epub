@@ -26,6 +26,7 @@ type options struct {
 	Title   string `default:"HTML" help:"Set epub title."`
 	Author  string `default:"HTML to Epub" help:"Set epub author."`
 	Verbose bool   `short:"v" help:"Verbose printing."`
+	About   bool   `help:"About."`
 
 	HTML []string `arg:"" optional:""`
 }
@@ -35,9 +36,8 @@ type HtmlToEpub struct {
 	DefaultCover []byte
 	ImagesDir    string
 
-	book *epub.Epub
-
-	imageIndex int
+	book   *epub.Epub
+	imgidx int
 }
 
 func (h *HtmlToEpub) Run() (err error) {
@@ -46,6 +46,11 @@ func (h *HtmlToEpub) Run() (err error) {
 		kong.Description("Command line tool for converting html to epub."),
 		kong.UsageOnError(),
 	)
+
+	if h.About {
+		fmt.Println("Visit https://github.com/gonejack/html-to-epub")
+		return
+	}
 
 	_, err = os.Stat(h.Output)
 	if !os.IsNotExist(err) {
@@ -79,14 +84,9 @@ func (h *HtmlToEpub) run(htmls []string, output string) (err error) {
 		return
 	}
 
-	h.book = epub.NewEpub(h.Title)
-	{
-		h.setAuthor()
-		h.setDesc()
-		err = h.setCover()
-		if err != nil {
-			return
-		}
+	err = h.mkbook()
+	if err != nil {
+		return
 	}
 
 	refs := make(map[string]string)
@@ -105,11 +105,11 @@ func (h *HtmlToEpub) run(htmls []string, output string) (err error) {
 
 	return
 }
-func (h *HtmlToEpub) setAuthor() {
+func (h *HtmlToEpub) mkbook() error {
+	h.book = epub.NewEpub(h.Title)
 	h.book.SetAuthor(h.Author)
-}
-func (h *HtmlToEpub) setDesc() {
 	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
+	return h.setCover()
 }
 func (h *HtmlToEpub) setCover() (err error) {
 	if h.Cover == "" {
@@ -126,11 +126,11 @@ func (h *HtmlToEpub) setCover() (err error) {
 		h.Cover = temp.Name()
 	}
 
-	fmime, err := mimetype.DetectFile(h.Cover)
+	m, err := mimetype.DetectFile(h.Cover)
 	if err != nil {
 		return fmt.Errorf("cannot detect cover mime type %s", err)
 	}
-	coverRef, err := h.book.AddImage(h.Cover, "cover"+fmime.Extension())
+	coverRef, err := h.book.AddImage(h.Cover, "cover"+m.Extension())
 	if err != nil {
 		return fmt.Errorf("cannot add cover %s", err)
 	}
@@ -149,13 +149,10 @@ func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err er
 	if err != nil {
 		return
 	}
-
 	doc = h.cleanDoc(doc)
 
 	images := h.saveImages(doc)
-	doc.Find("img").Each(func(i int, img *goquery.Selection) {
-		h.changeRef(html, img, refs, images)
-	})
+	doc.Find("img").Each(func(i int, img *goquery.Selection) { h.changeRef(html, img, refs, images) })
 
 	title := doc.Find("title").Text()
 	if title == "" {
@@ -251,9 +248,9 @@ func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, refs, do
 	}
 
 	// add image
-	internalName := fmt.Sprintf("image_%03d", h.imageIndex)
+	internalName := fmt.Sprintf("image_%03d", h.imgidx)
 	{
-		h.imageIndex += 1
+		h.imgidx += 1
 		if !strings.HasSuffix(internalName, fmime.Extension()) {
 			internalName += fmime.Extension()
 		}
