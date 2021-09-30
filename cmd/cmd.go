@@ -275,20 +275,18 @@ func (h *HtmlToEpub) openLocalFile(htmlFile string, ref string) (fd *os.File, er
 	}
 
 	// compatible with evernote's exported htmls
-	{
-		prefix := strings.TrimSuffix(htmlFile, filepath.Ext(htmlFile))
-		name := filepath.Base(ref)
-		fd, err = os.Open(filepath.Join(prefix+"_files", name))
-		if err == nil {
-			return
-		}
-		fd, err = os.Open(filepath.Join(prefix+".resources", name))
-		if err == nil {
-			return
-		}
-		if strings.HasSuffix(ref, ".") {
-			return h.openLocalFile(htmlFile, strings.TrimSuffix(ref, "."))
-		}
+	dirname := strings.TrimSuffix(htmlFile, filepath.Ext(htmlFile))
+	name := filepath.Base(ref)
+	fd, err = os.Open(filepath.Join(dirname+"_files", name))
+	if err == nil {
+		return
+	}
+	fd, err = os.Open(filepath.Join(dirname+".resources", name))
+	if err == nil {
+		return
+	}
+	if strings.HasSuffix(ref, ".") {
+		return h.openLocalFile(htmlFile, strings.TrimSuffix(ref, "."))
 	}
 
 	return
