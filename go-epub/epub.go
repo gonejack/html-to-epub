@@ -28,7 +28,6 @@ package epub
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -322,7 +321,7 @@ func (e *Epub) SetCover(internalImagePath string, internalCSSPath string) {
 	// Use default cover stylesheet if one isn't provided
 	if internalCSSPath == "" {
 		// Create a temporary file to hold the default cover CSS
-		tempFile, err := ioutil.TempFile("", tempDirPrefix)
+		tempFile, err := os.CreateTemp("", tempDirPrefix)
 		if err != nil {
 			panic(fmt.Sprintf("Error creating temp file: %s", err))
 		}

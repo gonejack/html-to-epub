@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -85,7 +84,7 @@ const (
 // Write writes the EPUB file. The destination path must be the full path to
 // the resulting file, including filename and extension.
 func (e *Epub) Write(destFilePath string) error {
-	tempDir, err := ioutil.TempDir("", tempDirPrefix)
+	tempDir, err := os.MkdirTemp("", tempDirPrefix)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			panic(fmt.Sprintf("Error removing temp directory: %s", err))
@@ -188,7 +187,7 @@ func createEpubFolders(tempDir string) {
 // Spec: http://www.idpf.org/epub/301/spec/epub-ocf.html#sec-container-metainf-container.xml
 func writeContainerFile(tempDir string) {
 	containerFilePath := filepath.Join(tempDir, metaInfFolderName, containerFilename)
-	if err := ioutil.WriteFile(
+	if err := os.WriteFile(
 		containerFilePath,
 		[]byte(
 			fmt.Sprintf(
@@ -417,7 +416,7 @@ func (e *Epub) writeMedia(tempDir string, mediaMap map[string]string, mediaFolde
 func writeMimetype(tempDir string) {
 	mimetypeFilePath := filepath.Join(tempDir, mimetypeFilename)
 
-	if err := ioutil.WriteFile(mimetypeFilePath, []byte(mediaTypeEpub), filePermissions); err != nil {
+	if err := os.WriteFile(mimetypeFilePath, []byte(mediaTypeEpub), filePermissions); err != nil {
 		panic(fmt.Sprintf("Error writing mimetype file: %s", err))
 	}
 }
