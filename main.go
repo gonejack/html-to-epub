@@ -4,18 +4,19 @@ import (
 	_ "embed"
 	"log"
 
-	"github.com/gonejack/html-to-epub/cmd"
+	"github.com/gonejack/html-to-epub/html2epub"
 )
 
 //go:embed cover.png
-var cover []byte
+var defaultCover []byte
 
 func main() {
-	c := cmd.HtmlToEpub{
-		DefaultCover: cover,
-		ImagesDir:    "images",
+	cmd := html2epub.HtmlToEpub{
+		Options:      html2epub.MustParseOptions(),
+		DefaultCover: defaultCover,
 	}
-	if err := c.Run(); err != nil {
+	err := cmd.Run()
+	if err != nil {
 		log.Fatal(err)
 	}
 }

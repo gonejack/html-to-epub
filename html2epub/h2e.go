@@ -1,4 +1,4 @@
-package cmd
+package html2epub
 
 import (
 	"crypto/md5"
@@ -8,89 +8,46 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alecthomas/kong"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gonejack/get"
 
 	"github.com/gonejack/html-to-epub/go-epub"
 )
 
-type options struct {
-	Output  string `short:"o" default:"output.epub" help:"Output filename."`
-	Cover   string `short:"c" help:"Set epub cover image."`
-	Title   string `default:"HTML" help:"Set epub title."`
-	Author  string `default:"HTML to Epub" help:"Set epub author."`
-	Verbose bool   `short:"v" help:"Verbose printing."`
-	About   bool   `help:"About."`
-
-	HTML []string `arg:"" optional:""`
-}
 type HtmlToEpub struct {
-	options
-
+	Options
 	DefaultCover []byte
-	ImagesDir    string
 
 	book   *epub.Epub
-	imgidx int
+	imgIdx int
 }
 
 func (h *HtmlToEpub) Run() (err error) {
-	kong.Parse(&h.options,
-		kong.Name("html-to-epub"),
-		kong.Description("Command line tool for converting html to epub."),
-		kong.UsageOnError(),
-	)
-
 	if h.About {
 		fmt.Println("Visit https://github.com/gonejack/html-to-epub")
 		return
 	}
-
-	_, err = os.Stat(h.Output)
-	if !os.IsNotExist(err) {
+	_, exx := os.Stat(h.Output)
+	if exx == nil {
 		return fmt.Errorf("output file %s already exist", h.Output)
 	}
-
-	// support Windows globbing
-	if runtime.GOOS == "windows" {
-		for _, html := range h.HTML {
-			if html == "*.html" {
-				h.HTML = nil
-				break
-			}
-		}
+	if len(h.HTML) == 0 {
+		return errors.New("no .html file given")
 	}
-
-	if len(h.HTML) == 0 || h.HTML[0] == "*.html" {
-		h.HTML, _ = filepath.Glob("*.html")
-	}
-
-	return h.run(h.HTML, h.Output)
+	return h.run()
 }
-
-func (h *HtmlToEpub) run(htmls []string, output string) (err error) {
-	if len(htmls) == 0 {
-		return errors.New("no html given")
-	}
-
-	err = h.mkdir()
-	if err != nil {
-		return
-	}
-
-	err = h.mkbook()
+func (h *HtmlToEpub) run() (err error) {
+	err = h.makeBook()
 	if err != nil {
 		return
 	}
 
 	refs := make(map[string]string)
-	for i, html := range htmls {
+	for i, html := range h.HTML {
 		err = h.add(i+1, refs, html)
 		if err != nil {
 			err = fmt.Errorf("parse %s failed: %s", html, err)
@@ -98,14 +55,14 @@ func (h *HtmlToEpub) run(htmls []string, output string) (err error) {
 		}
 	}
 
-	err = h.book.Write(output)
+	err = h.book.Write(h.Output)
 	if err != nil {
 		return fmt.Errorf("cannot write output epub: %s", err)
 	}
 
 	return
 }
-func (h *HtmlToEpub) mkbook() error {
+func (h *HtmlToEpub) makeBook() error {
 	h.book = epub.NewEpub(h.Title)
 	h.book.SetAuthor(h.Author)
 	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
@@ -189,6 +146,7 @@ func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 			log.Printf("parse %s fail: %s", src, err)
 			return
 		}
+		_ = os.MkdirAll(h.ImagesDir, 0766)
 		localFile = filepath.Join(h.ImagesDir, fmt.Sprintf("%s%s", md5str(src), filepath.Ext(uri.Path)))
 
 		tasks.Add(src, localFile)
@@ -248,9 +206,9 @@ func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, refs, do
 	}
 
 	// add image
-	internalName := fmt.Sprintf("image_%03d", h.imgidx)
+	internalName := fmt.Sprintf("image_%03d", h.imgIdx)
 	{
-		h.imgidx += 1
+		h.imgIdx += 1
 		if !strings.HasSuffix(internalName, fmime.Extension()) {
 			internalName += fmime.Extension()
 		}
@@ -300,13 +258,7 @@ func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
 
 	return doc
 }
-func (h *HtmlToEpub) mkdir() error {
-	err := os.MkdirAll(h.ImagesDir, 0777)
-	if err != nil {
-		return fmt.Errorf("cannot make images dir %s", err)
-	}
-	return nil
-}
+
 func md5str(s string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
