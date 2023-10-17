@@ -7,7 +7,7 @@ This command line tool converts .html to .epub with images fetching.
 
 ### Install
 ```shell
-> go get github.com/gonejack/html-to-epub
+> go install github.com/gonejack/html-to-epub@latest
 ```
 
 ### Usage
