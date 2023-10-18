@@ -33,7 +33,6 @@ var extensionMediaTypes = map[string]string{
 	".ttf":   "application/font-sfnt",
 	".woff":  "application/font-woff",
 	".woff2": "font/woff2",
-
 	".bmp":   "image/bmp",
 	".bpg":   "image/bpg",
 	".djvu":  "image/vnd.djvu",
@@ -50,6 +49,7 @@ var extensionMediaTypes = map[string]string{
 	".psd":   "image/vnd.adobe.photoshop",
 	".tiff":  "image/tiff",
 	".xcf":   "image/x-xcf",
+	".avif":  "image/avif",
 }
 
 const (
