@@ -22,8 +22,9 @@ type HtmlToEpub struct {
 	Options
 	DefaultCover []byte
 
-	book   *epub.Epub
-	imgIdx int
+	book      *epub.Epub
+	customCSS string
+	imgIdx    int
 }
 
 func (h *HtmlToEpub) Run() (err error) {
@@ -66,8 +67,12 @@ func (h *HtmlToEpub) makeBook() error {
 	h.book = epub.NewEpub(h.Title)
 	h.book.SetAuthor(h.Author)
 	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
-	if h.Css!="" {
-		h.book.AddCSS(h.Css, "custom_style.css")
+	if h.CSS != "" {
+		p, err := h.book.AddCSS(h.CSS, "custom_style.css")
+		if err != nil {
+			return fmt.Errorf("cannot read css file: %w", err)
+		}
+		h.customCSS = p
 	}
 	return h.setCover()
 }
@@ -124,13 +129,8 @@ func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err er
 	if err != nil {
 		return
 	}
-	
-	cssInternalPath := ""
-	if h.Css != "" {
-		cssInternalPath = "../css/custom_style.css"
-	}
-	
-	_, err = h.book.AddSection(content, title, "", cssInternalPath)
+
+	_, err = h.book.AddSection(content, title, "", h.customCSS)
 
 	return
 }
