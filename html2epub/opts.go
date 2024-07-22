@@ -13,7 +13,8 @@ type Options struct {
 	Output  string `short:"o" default:"output.epub" help:"Output filename."`
 	Verbose bool   `short:"v" help:"Verbose printing."`
 	About   bool   `help:"About."`
-
+	Css		string `default:"" help:"A path to a CSS stylesheet, local or online"`
+	
 	ImagesDir string `hidden:"" default:"images"`
 
 	HTML []string `arg:"" optional:""`

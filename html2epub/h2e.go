@@ -66,6 +66,9 @@ func (h *HtmlToEpub) makeBook() error {
 	h.book = epub.NewEpub(h.Title)
 	h.book.SetAuthor(h.Author)
 	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
+	if h.Css!="" {
+		h.book.AddCSS(h.Css, "custom_style.css")
+	}
 	return h.setCover()
 }
 func (h *HtmlToEpub) setCover() (err error) {
@@ -121,8 +124,13 @@ func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err er
 	if err != nil {
 		return
 	}
-
-	_, err = h.book.AddSection(content, title, "", "")
+	
+	cssInternalPath := ""
+	if h.Css != "" {
+		cssInternalPath = "../css/custom_style.css"
+	}
+	
+	_, err = h.book.AddSection(content, title, "", cssInternalPath)
 
 	return
 }
