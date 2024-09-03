@@ -18,22 +18,23 @@ import (
 	"github.com/gonejack/html-to-epub/go-epub"
 )
 
-type HtmlToEpub struct {
+type Cmd struct {
 	Options
 	DefaultCover []byte
 
-	book      *epub.Epub
-	customCSS string
-	imgIdx    int
+	book *epub.Epub
+
+	customCSS  string
+	imageIndex int
 }
 
-func (h *HtmlToEpub) Run() (err error) {
+func (h *Cmd) Run() (err error) {
 	if h.About {
 		fmt.Println("Visit https://github.com/gonejack/html-to-epub")
 		return
 	}
-	_, exx := os.Stat(h.Output)
-	if exx == nil {
+	_, e := os.Stat(h.Output)
+	if e == nil {
 		return fmt.Errorf("output file %s already exist", h.Output)
 	}
 	if len(h.HTML) == 0 {
@@ -41,12 +42,11 @@ func (h *HtmlToEpub) Run() (err error) {
 	}
 	return h.run()
 }
-func (h *HtmlToEpub) run() (err error) {
-	err = h.makeBook()
+func (h *Cmd) run() (err error) {
+	err = h.newBook()
 	if err != nil {
 		return
 	}
-
 	refs := make(map[string]string)
 	for i, html := range h.HTML {
 		err = h.add(i+1, refs, html)
@@ -55,55 +55,50 @@ func (h *HtmlToEpub) run() (err error) {
 			return
 		}
 	}
-
 	err = h.book.Write(h.Output)
 	if err != nil {
 		return fmt.Errorf("cannot write output epub: %s", err)
 	}
-
 	return
 }
-func (h *HtmlToEpub) makeBook() error {
+func (h *Cmd) newBook() error {
 	h.book = epub.NewEpub(h.Title)
 	h.book.SetAuthor(h.Author)
 	h.book.SetDescription(fmt.Sprintf("Epub generated at %s with github.com/gonejack/html-to-epub", time.Now().Format("2006-01-02")))
 	if h.CSS != "" {
-		p, err := h.book.AddCSS(h.CSS, "custom_style.css")
+		ref, err := h.book.AddCSS(h.CSS, "custom_style.css")
 		if err != nil {
 			return fmt.Errorf("cannot read css file: %w", err)
 		}
-		h.customCSS = p
+		h.customCSS = ref
 	}
 	return h.setCover()
 }
-func (h *HtmlToEpub) setCover() (err error) {
+func (h *Cmd) setCover() (err error) {
 	if h.Cover == "" {
-		temp, err := os.CreateTemp("", "html-to-epub")
+		f, err := os.CreateTemp("", "html-to-epub")
 		if err != nil {
 			return fmt.Errorf("cannot create tempfile: %s", err)
 		}
-		_, err = temp.Write(h.DefaultCover)
+		_, err = f.Write(h.DefaultCover)
 		if err != nil {
 			return fmt.Errorf("cannot write tempfile: %s", err)
 		}
-		_ = temp.Close()
-
-		h.Cover = temp.Name()
+		_ = f.Close()
+		h.Cover = f.Name()
 	}
-
-	m, err := mimetype.DetectFile(h.Cover)
+	mime, err := mimetype.DetectFile(h.Cover)
 	if err != nil {
 		return fmt.Errorf("cannot detect cover mime type %s", err)
 	}
-	coverRef, err := h.book.AddImage(h.Cover, "cover"+m.Extension())
+	coverRef, err := h.book.AddImage(h.Cover, "cover"+mime.Extension())
 	if err != nil {
 		return fmt.Errorf("cannot add cover %s", err)
 	}
 	h.book.SetCover(coverRef, "")
-
 	return
 }
-func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err error) {
+func (h *Cmd) add(index int, refs map[string]string, html string) (err error) {
 	fd, err := os.Open(html)
 	if err != nil {
 		return
@@ -131,10 +126,9 @@ func (h *HtmlToEpub) add(index int, refs map[string]string, html string) (err er
 	}
 
 	_, err = h.book.AddSection(content, title, "", h.customCSS)
-
 	return
 }
-func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
+func (h *Cmd) saveImages(doc *goquery.Document) map[string]string {
 	downloads := make(map[string]string)
 
 	tasks := get.NewDownloadTasks()
@@ -168,15 +162,14 @@ func (h *HtmlToEpub) saveImages(doc *goquery.Document) map[string]string {
 
 	return downloads
 }
-func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, refs, downloads map[string]string) {
+func (h *Cmd) changeRef(htmlFile string, img *goquery.Selection, refs, downloads map[string]string) {
 	img.RemoveAttr("loading")
 	img.RemoveAttr("srcset")
 
 	src, _ := img.Attr("src")
-
-	internalRef, exist := refs[src]
+	ref, exist := refs[src]
 	if exist {
-		img.SetAttr("src", internalRef)
+		img.SetAttr("src", ref)
 		return
 	}
 
@@ -199,47 +192,40 @@ func (h *HtmlToEpub) changeRef(htmlFile string, img *goquery.Selection, refs, do
 		_ = fd.Close()
 		localFile = fd.Name()
 	}
-
 	// check mime
-	fmime, err := mimetype.DetectFile(localFile)
-	{
-		if err != nil {
-			log.Printf("cannot detect image mime of %s: %s", src, err)
-			return
-		}
-		if !strings.HasPrefix(fmime.String(), "image") {
-			log.Printf("mime of %s is %s instead of images", src, fmime.String())
-			return
-		}
+	mime, err := mimetype.DetectFile(localFile)
+	if err != nil {
+		log.Printf("cannot detect image mime of %s: %s", src, err)
+		return
 	}
-
+	if !strings.HasPrefix(mime.String(), "image") {
+		log.Printf("mime of %s is %s instead of images", src, mime.String())
+		return
+	}
 	// add image
-	internalName := fmt.Sprintf("image_%03d", h.imgIdx)
+	name := fmt.Sprintf("image_%03d", h.imageIndex)
 	{
-		h.imgIdx += 1
-		if !strings.HasSuffix(internalName, fmime.Extension()) {
-			internalName += fmime.Extension()
+		h.imageIndex += 1
+		if !strings.HasSuffix(name, mime.Extension()) {
+			name += mime.Extension()
 		}
-		internalRef, err = h.book.AddImage(localFile, internalName)
+		ref, err = h.book.AddImage(localFile, name)
 		if err != nil {
 			log.Printf("cannot add image %s: %s", localFile, err)
 			return
 		}
-		refs[src] = internalRef
+		refs[src] = ref
 	}
-
 	if h.Verbose {
 		log.Printf("replace %s as %s", src, localFile)
 	}
-
-	img.SetAttr("src", internalRef)
+	img.SetAttr("src", ref)
 }
-func (h *HtmlToEpub) openLocalFile(htmlFile string, ref string) (fd *os.File, err error) {
+func (h *Cmd) openLocalFile(htmlFile string, ref string) (fd *os.File, err error) {
 	fd, err = os.Open(ref)
 	if err == nil {
 		return
 	}
-
 	// compatible with evernote's exported htmls
 	dirname := strings.TrimSuffix(htmlFile, filepath.Ext(htmlFile))
 	name := filepath.Base(ref)
@@ -254,16 +240,13 @@ func (h *HtmlToEpub) openLocalFile(htmlFile string, ref string) (fd *os.File, er
 	if strings.HasSuffix(ref, ".") {
 		return h.openLocalFile(htmlFile, strings.TrimSuffix(ref, "."))
 	}
-
 	return
 }
-func (h *HtmlToEpub) cleanDoc(doc *goquery.Document) *goquery.Document {
+func (h *Cmd) cleanDoc(doc *goquery.Document) *goquery.Document {
 	// remove inoreader ads
 	doc.Find("body").Find(`div:contains("ads from inoreader")`).Closest("center").Remove()
-
 	// remove solidot.org ads
 	doc.Find("img[src='https://img.solidot.org//0/446/liiLIZF8Uh6yM.jpg']").Remove()
-
 	return doc
 }
 

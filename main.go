@@ -11,7 +11,7 @@ import (
 var defaultCover []byte
 
 func main() {
-	cmd := html2epub.HtmlToEpub{
+	cmd := html2epub.Cmd{
 		Options:      html2epub.MustParseOptions(),
 		DefaultCover: defaultCover,
 	}
